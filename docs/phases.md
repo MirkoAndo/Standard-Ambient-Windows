@@ -29,8 +29,14 @@ Obiettivo: installare il set minimo di applicazioni per lavorare.
 - Browser
 - Editor/IDE
 - Utility sistema
-- Codec e media
 - Tool base (zip, git, terminal)
+
+Profili di installazione (config/packages.json):
+
+- base: Brave, Discord, WhatsApp, WinRAR, 7-Zip, AnyDesk, Windhawk, Terminal, PowerShell, Git
+- dev: VS Code, Python, Java
+- gaming: Steam, Driver Booster
+- media: vuoto (da definire)
 
 ## Fase 3 - Impostazioni di sistema
 

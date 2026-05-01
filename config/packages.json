@@ -1,7 +1,38 @@
 {
-  "winget": [
-    "Microsoft.PowerShell",
-    "Git.Git"
-  ],
-  "choco": []
+  "profiles": {
+    "base": {
+      "winget": [
+        "Brave.Brave",
+        "Discord.Discord",
+        "WhatsApp.WhatsApp",
+        "WinRAR.WinRAR",
+        "7zip.7zip",
+        "AnyDesk.AnyDesk",
+        "Windhawk.Windhawk",
+        "Microsoft.WindowsTerminal",
+        "Microsoft.PowerShell",
+        "Git.Git"
+      ],
+      "choco": []
+    },
+    "dev": {
+      "winget": [
+        "Microsoft.VisualStudioCode",
+        "Python.Python.3.12",
+        "EclipseAdoptium.Temurin.21.JDK"
+      ],
+      "choco": []
+    },
+    "gaming": {
+      "winget": [
+        "Valve.Steam",
+        "IObit.DriverBooster"
+      ],
+      "choco": []
+    },
+    "media": {
+      "winget": [],
+      "choco": []
+    }
+  }
 }

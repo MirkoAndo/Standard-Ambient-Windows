@@ -37,8 +37,17 @@ Script di avvio fasi: scripts/phases/
 
 ## Installazioni con winget
 
-- Aggiungi i pacchetti in config/packages.json
-- Usa scripts/install.ps1 come punto di ingresso per winget
+- Aggiungi i pacchetti in config/packages.json (profili)
+- Usa scripts/install-phase2.ps1 per la Fase 2
+- Avvio rapido: scripts/phases/phase2.ps1 -Profiles base,dev
+- Per installer visibili e scelta percorso, lascia default (interactive)
+
+## Fase 3 - Sistema
+
+- Privacy: scripts/privacy.ps1
+- Power plan: scripts/power.ps1
+- Windows Update: scripts/update.ps1
+- Avvio rapido: scripts/phases/phase3.ps1
 
 ## Note
 
