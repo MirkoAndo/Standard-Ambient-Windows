@@ -1,115 +1,96 @@
 # Requires -Version 5.1
 param(
-    [string]$ConfigPath = (Join-Path $PSScriptRoot "..\config\settings\notifications.json"),
-    [string[]]$AllowedApps,
-    [switch]$DisableAllOthers,
-    [switch]$EnableGlobalToasts
+    [string]$CertName = "Standard Ambient Code Signing",
+    [string]$TimeStampUrl = "http://timestamp.digicert.com",
+    [switch]$NoTimestamp,
+    [switch]$SkipTrust,
+    [string]$TargetPath = (Join-Path $PSScriptRoot "..")
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$root = Split-Path -Parent $PSScriptRoot
-
-function Resolve-ConfigPath {
-    param([string]$Path)
-
-    if ([string]::IsNullOrWhiteSpace($Path)) {
-        return $Path
-    }
-
-    if ([System.IO.Path]::IsPathRooted($Path)) {
-        return $Path
-    }
-
-    return (Join-Path $root $Path)
+function Write-Log {
+    param([string]$Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    Write-Host "[$timestamp] $Message"
 }
 
-function Read-Config {
-    param([string]$Path)
+function Get-CodeSigningCert {
+    param([string]$Name)
 
-    $resolvedPath = Resolve-ConfigPath -Path $Path
-    if (-not (Test-Path $resolvedPath)) {
-        return $null
+    $subject = "CN=$Name"
+    $certs = Get-ChildItem -Path Cert:\CurrentUser\My | Where-Object {
+        $_.Subject -eq $subject -and ($_.EnhancedKeyUsageList.ObjectId -contains "1.3.6.1.5.5.7.3.3")
     }
 
-    return (Get-Content $resolvedPath | ConvertFrom-Json)
+    return $certs | Sort-Object NotAfter -Descending | Select-Object -First 1
 }
 
-function Write-RegistryValue {
-    param(
-        [string]$Path,
-        [string]$Name,
-        [object]$Value,
-        [Microsoft.Win32.RegistryValueKind]$Type = [Microsoft.Win32.RegistryValueKind]::DWord
-    )
+function Ensure-TrustedCert {
+    param([System.Security.Cryptography.X509Certificates.X509Certificate2]$Cert)
 
-    if (-not (Test-Path $Path)) {
-        New-Item -Path $Path -Force | Out-Null
+    if ($SkipTrust) {
+        return
     }
 
-    Set-ItemProperty -Path $Path -Name $Name -Value $Value -Type $Type
+    $tempPath = Join-Path $env:TEMP "standard-ambient-codesign.cer"
+    Export-Certificate -Cert $Cert -FilePath $tempPath | Out-Null
+
+    $thumb = $Cert.Thumbprint
+    $trustedPublisher = Get-ChildItem -Path Cert:\CurrentUser\TrustedPublisher | Where-Object { $_.Thumbprint -eq $thumb }
+    if (-not $trustedPublisher) {
+        Import-Certificate -FilePath $tempPath -CertStoreLocation Cert:\CurrentUser\TrustedPublisher | Out-Null
+        Write-Log "Certificato aggiunto a TrustedPublisher (CurrentUser)"
+    }
+
+    $trustedRoot = Get-ChildItem -Path Cert:\CurrentUser\Root | Where-Object { $_.Thumbprint -eq $thumb }
+    if (-not $trustedRoot) {
+        Import-Certificate -FilePath $tempPath -CertStoreLocation Cert:\CurrentUser\Root | Out-Null
+        Write-Log "Certificato aggiunto a Root (CurrentUser)"
+    }
+
+    Remove-Item -Path $tempPath -Force -ErrorAction SilentlyContinue
 }
 
 try {
-    $config = Read-Config -Path $ConfigPath
-    if ($config) {
-        if (-not $PSBoundParameters.ContainsKey("AllowedApps") -and $config.allowedApps) {
-            $AllowedApps = @($config.allowedApps)
+    if (-not (Get-Command New-SelfSignedCertificate -ErrorAction SilentlyContinue)) {
+        throw "Cmdlet New-SelfSignedCertificate non disponibile. Usa PowerShell 5.1."
+    }
+
+    $cert = Get-CodeSigningCert -Name $CertName
+    if (-not $cert) {
+        Write-Log "Creo certificato self-signed: $CertName"
+        $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=$CertName" -CertStoreLocation Cert:\CurrentUser\My
+    } else {
+        Write-Log "Certificato trovato: $CertName"
+    }
+
+    Ensure-TrustedCert -Cert $cert
+
+    if (-not (Test-Path $TargetPath)) {
+        throw "TargetPath non trovato: $TargetPath"
+    }
+
+    $files = Get-ChildItem -Path $TargetPath -Recurse -Filter *.ps1 -File | Where-Object {
+        $_.FullName -notmatch "\\.git\\"
+    }
+
+    foreach ($file in $files) {
+        if ($NoTimestamp) {
+            $result = Set-AuthenticodeSignature -FilePath $file.FullName -Certificate $cert
+        } else {
+            $result = Set-AuthenticodeSignature -FilePath $file.FullName -Certificate $cert -TimestampServer $TimeStampUrl
         }
-        if (-not $PSBoundParameters.ContainsKey("DisableAllOthers") -and $null -ne $config.disableAllOthers) {
-            if ($config.disableAllOthers) {
-                $DisableAllOthers = $true
-            }
-        }
-        if (-not $PSBoundParameters.ContainsKey("EnableGlobalToasts") -and $null -ne $config.enableGlobalToasts) {
-            if ($config.enableGlobalToasts) {
-                $EnableGlobalToasts = $true
-            }
-        }
-    }
 
-    if (-not $AllowedApps -or $AllowedApps.Count -eq 0) {
-        throw "AllowedApps e vuoto. Specifica almeno Windows Defender."
-    }
-
-    if ($EnableGlobalToasts) {
-        $push = "HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications"
-        Write-RegistryValue -Path $push -Name "ToastEnabled" -Value 1
-
-        $notifications = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings"
-        Write-RegistryValue -Path $notifications -Name "NOC_GLOBAL_SETTING_TOASTS_ENABLED" -Value 1
-    }
-
-    $settingsPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings"
-    if (-not (Test-Path $settingsPath)) {
-        New-Item -Path $settingsPath -Force | Out-Null
-    }
-
-    $allowedSet = @{}
-    foreach ($name in $AllowedApps) {
-        $allowedSet[$name] = $true
-    }
-
-    if ($DisableAllOthers) {
-        $subkeys = Get-ChildItem -Path $settingsPath -ErrorAction SilentlyContinue
-        foreach ($key in $subkeys) {
-            if (-not $allowedSet.ContainsKey($key.PSChildName)) {
-                Write-RegistryValue -Path $key.PSPath -Name "Enabled" -Value 0
-            }
+        if ($result.Status -ne "Valid") {
+            Write-Log "Firma fallita: $($file.FullName) -> $($result.Status)"
+        } else {
+            Write-Log "Firmato: $($file.FullName)"
         }
     }
 
-    foreach ($name in $AllowedApps) {
-        $appKey = Join-Path $settingsPath $name
-        if (-not (Test-Path $appKey)) {
-            Write-Warning "Chiave notifica non trovata: $name"
-            continue
-        }
-        Write-RegistryValue -Path $appKey -Name "Enabled" -Value 1
-    }
-
-    Write-Host "Notifiche aggiornate. Consentite: $($AllowedApps -join ", ")"
+    Write-Log "Firma completata."
 } catch {
     Write-Error $_
     exit 1
@@ -118,8 +99,8 @@ try {
 # SIG # Begin signature block
 # MIIb+wYJKoZIhvcNAQcCoIIb7DCCG+gCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUHtsAQOM5rXvg9hVE7TSz+ut5
-# LMCgghZeMIIDIDCCAgigAwIBAgIQXBB2paUpbYVHWuvLA+RWZzANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUX68IZn9pHVtK90eY5pQHY/8h
+# EW+gghZeMIIDIDCCAgigAwIBAgIQXBB2paUpbYVHWuvLA+RWZzANBgkqhkiG9w0B
 # AQsFADAoMSYwJAYDVQQDDB1TdGFuZGFyZCBBbWJpZW50IENvZGUgU2lnbmluZzAe
 # Fw0yNjA1MDExMTA3MjVaFw0yNzA1MDExMTI3MjVaMCgxJjAkBgNVBAMMHVN0YW5k
 # YXJkIEFtYmllbnQgQ29kZSBTaWduaW5nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A
@@ -242,28 +223,28 @@ try {
 # YW5kYXJkIEFtYmllbnQgQ29kZSBTaWduaW5nAhBcEHalpSlthUda68sD5FZnMAkG
 # BSsOAwIaBQCgeDAYBgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJ
 # AzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMG
-# CSqGSIb3DQEJBDEWBBTlb3LHdyGLTMgUax8LHeAVEPZCDDANBgkqhkiG9w0BAQEF
-# AASCAQCR8ocSyYECyNu3X8pfFr59kzclc64CQIhhHJl8WA3AyQFf9IyrhciGcCpD
-# LtrzH/mOroT0CRF9uKj0qhJ8O+HzqwYxlVik9JLP/PE5lX7XOF5pHRevyE0XqfYA
-# QzsRn5LKr9iPIsqymoxmBM+Pdi1mgSu0mazNB9eN1EPiP02Lha+3I0Uh2PP3ImV1
-# UyO9VUeHS/f6qbnAvZNPJjaX5wuKEN+wGLCPiSt80gxfXAueEoMjltI//e39sr8J
-# sWJcnHydVs955WpJiPcRDicqqS+33CEChThgifhTs7gWKlj/lLNq1vA8IU3IhbMs
-# qDE0XAB25CpTma2CdiH2OCkYAUjZoYIDJjCCAyIGCSqGSIb3DQEJBjGCAxMwggMP
+# CSqGSIb3DQEJBDEWBBT4UIAUp6ClBX0AUOUPI77zYeVLkzANBgkqhkiG9w0BAQEF
+# AASCAQAkzj12pk1ZzxsgqBYd+hqQseIP3oIAk4hXcFqswl0D3YvtxD9x0grHR7pw
+# gmmRFzl2B3ezSbGzCoOeTx7tt1wX9L99S/d52eyNEH3DiQQ76oMCBneTMWcil77P
+# DndsldEaM9eVhRCqtNGTcXz6cmxrjO4ec//Cf/w0Iughhtc3FzUY1JToeYAytF+F
+# toefX46GU8qlFIwI5eWZ3UCZmZSH9Q/Ru/IAWPq2ty7JyhPQsLgm0aWa/X+AybPk
+# zB6bVYbs+9h2+mpAEjMD9kQIfi9RJhdSJeCgUViu2I4xh352vKpmAGcPqW3AD0ea
+# fzVrTUoeJH5XJENg2qVp22XqFqUroYIDJjCCAyIGCSqGSIb3DQEJBjGCAxMwggMP
 # AgEBMH0waTELMAkGA1UEBhMCVVMxFzAVBgNVBAoTDkRpZ2lDZXJ0LCBJbmMuMUEw
 # PwYDVQQDEzhEaWdpQ2VydCBUcnVzdGVkIEc0IFRpbWVTdGFtcGluZyBSU0E0MDk2
 # IFNIQTI1NiAyMDI1IENBMQIQCoDvGEuN8QWC0cR2p5V0aDANBglghkgBZQMEAgEF
 # AKBpMBgGCSqGSIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTI2
-# MDUwMTExMTczMVowLwYJKoZIhvcNAQkEMSIEIIF2lemEpfRA4WcH5X2rwRgmYMmu
-# /+LZJANKIm4EIwt9MA0GCSqGSIb3DQEBAQUABIICAH48XxuTZhRDTtsEJqrBjYYp
-# 3hFjRzZQd+qHk+SoNpVY7PTZe8fpgQ2viFYJsqdkT3mIMeuqT79KneYJj6P7QiT3
-# aL3qj72J53+zyKw9WabdnzXyiUIMJxWICOKJMnFezmDuov4oUZbPClp4MUU/DcDh
-# rWH1LWY1UWh2KcmzX31nNlJNce3pJT0zOkhldjp9gSlREqtaU0dJK14xxxsyy9Tu
-# RJ67uSd9D95upt2sLate3ulaZx8JU6plAkEmOFxUMDzk1SfsKJMUTbHYF10A8N7i
-# JM+IfRW5VxY0gHLiAbZ8UxyBDW3qX2M62px80xoupiIIKhfotBCj3Cxz5JFw51UW
-# DyGpERjPoYA+LKMvnOzjALg8NEUE4HerP6LNilJavVcYdRfpUhXIx7qMjaJrs0Kn
-# wsW0b+nIC7R/+fibzZUjwPSjlc28tjRwRNbPByJwUVKNVv7UitpXlDXpVk4rezLI
-# 0Tt2OM2UWHmGjfihIc9X1Q4IX3b38MM9Jq1lscqZWrXvS9ZqRg7pMXikYmvIGSDF
-# uLlV4kLtS15ZYjz3IqlZlK+NYbWYVQImzGo8D4GFXac0G7bwSa+eYz3girJa4raH
-# 9lTgZ/IOuJEa9NrjzQKBeIbvBzsds+wemXnQ1tIH6jGLnuKVJ7FX0ierEsbA748E
-# 28ZyIsTY8fLnO9OFCZ/Y
+# MDUwMTExMTczMlowLwYJKoZIhvcNAQkEMSIEIJJzMXYlhqfpSTRC4JbDVl4u50MX
+# Kpezvsd/eU6W4jNzMA0GCSqGSIb3DQEBAQUABIICAGUr9k/YWA/lI0FyG6brbdKt
+# elqOwjihWt+rOzPR/9lPv4C4Zp4IfrimGpaD1K+jjUlxPv06Bk1HfexVeSG1IBby
+# tXyCnv5+XHZJl9ya4vW7lrOdtmtDQ/p9Lm5maCp98yC4iW20nWGsMszJHLXlkaRg
+# M0eH8A7Ujpun/JwDnEI5nYqIMlHH8nAHQ0EIEEy0GPJAtz7SkfL8nPcTBmwD5BnU
+# BR3sd6nujzSEe0/mQ0Sne6f4xvpIfZrhCl/t9QxslAYiUKzNrQmmNE9IhpjwnuB2
+# Ia5MRGcXVWlWPrGyA609fmvx0wPbE4e56jmDZQx7ABaYaqPQr4vt+abqTWjcZAUr
+# WiMzrnw12zrqN8uW+dB/EHjreKWX3zdaLA5BVxAYrZ3xHjPbQcX8PU4iWH+9wul2
+# ruFlCGo5OAYJHdSUm4XLw0EMOoeNWQ7ApkqaCykMyGntANY74yDPW7p+ZwpHhVLR
+# gaw6GpWZaGNXeR9IImfPFYra9CqZVQgwEj/8LV2srf1GAQrzDLoODg21TrqWpaUz
+# favFxy3KsvXGvJAT3VGq1Geyk7nRrNDW2i/5FOM4R2bHfjcwWiShsJ7Fj+oj5mpd
+# NfUsTuBldxowYZUvFtNaQFdlOCVW2B8Og/AKa6lkAIh77TH5AkN6l45XX92/yw6o
+# bjRRwT2wGtNz1SKsHnQO
 # SIG # End signature block

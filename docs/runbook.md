@@ -20,6 +20,11 @@ Script di avvio fasi: scripts/phases/
 
 - Avvio guidato: wizard.ps1
 
+## Firma script (self-signed)
+
+- Genera certificato e firma tutti gli script: scripts/sign.ps1
+- Se il timestamp fallisce (offline), usa: scripts/sign.ps1 -NoTimestamp
+
 ## Personalizzazione impostazioni
 
 - Salva le impostazioni da applicare in config/settings/
