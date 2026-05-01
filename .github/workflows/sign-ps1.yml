@@ -1,0 +1,58 @@
+name: Sign PowerShell Scripts
+
+on:
+  workflow_dispatch:
+    inputs:
+      timestamp_url:
+        description: "Timestamp URL"
+        required: false
+        default: "http://timestamp.digicert.com"
+
+jobs:
+  sign:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Decode certificate
+        shell: pwsh
+        run: |
+          if (-not $env:CODESIGN_CERT_BASE64) { throw "Missing CODESIGN_CERT_BASE64" }
+          $bytes = [Convert]::FromBase64String($env:CODESIGN_CERT_BASE64)
+          [IO.File]::WriteAllBytes("cert.pfx", $bytes)
+
+      - name: Sign scripts
+        shell: pwsh
+        env:
+          PFX_PASSWORD: ${{ secrets.CODESIGN_CERT_PASSWORD }}
+        run: |
+          if (-not $env:PFX_PASSWORD) { throw "Missing CODESIGN_CERT_PASSWORD" }
+          $ts = "${{ inputs.timestamp_url }}"
+          .\scripts\sign-release.ps1 -PfxPath .\cert.pfx -PfxPassword $env:PFX_PASSWORD -TimestampUrl $ts
+
+      - name: Verify signatures
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path . -Recurse -Filter *.ps1 -File
+          $bad = @()
+          foreach ($file in $files) {
+            $sig = Get-AuthenticodeSignature -FilePath $file.FullName
+            if ($sig.Status -ne "Valid") { $bad += $file.FullName }
+          }
+          if ($bad.Count -gt 0) { $bad | ForEach-Object { Write-Host "Invalid: $_" }; throw "Firma non valida" }
+
+      - name: Upload signed scripts
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-scripts
+          path: |
+            **/*.ps1
+
+      - name: Cleanup
+        shell: pwsh
+        run: |
+          Remove-Item -Path .\cert.pfx -Force
+
+env:
+  CODESIGN_CERT_BASE64: ${{ secrets.CODESIGN_CERT_BASE64 }}

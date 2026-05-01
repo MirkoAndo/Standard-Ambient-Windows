@@ -25,6 +25,14 @@ Script di avvio fasi: scripts/phases/
 - Genera certificato e firma tutti gli script: scripts/sign.ps1
 - Se il timestamp fallisce (offline), usa: scripts/sign.ps1 -NoTimestamp
 
+## Firma script (certificato reale)
+
+- Workflow: .github/workflows/sign-ps1.yml
+- Script locale: scripts/sign-release.ps1
+- Secret richiesti su GitHub:
+	- CODESIGN_CERT_BASE64 (PFX in base64)
+	- CODESIGN_CERT_PASSWORD
+
 ## Personalizzazione impostazioni
 
 - Salva le impostazioni da applicare in config/settings/
