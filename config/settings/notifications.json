@@ -1,0 +1,8 @@
+{
+  "allowedApps": [
+    "Windows.SystemToast.SecurityAndMaintenance",
+    "Microsoft.Windows.SecHealthUI"
+  ],
+  "disableAllOthers": true,
+  "enableGlobalToasts": true
+}

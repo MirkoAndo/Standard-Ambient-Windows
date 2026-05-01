@@ -1,0 +1,13 @@
+{
+  "mode": "Auto",
+  "style": "Fill",
+  "applyLockScreen": true,
+  "light": {
+    "wallpaper": "assets/wallpapers/light.jpg",
+    "lockScreen": "assets/wallpapers/light-lock.jpg"
+  },
+  "dark": {
+    "wallpaper": "assets/wallpapers/dark.jpg",
+    "lockScreen": "assets/wallpapers/dark-lock.jpg"
+  }
+}

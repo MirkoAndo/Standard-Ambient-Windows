@@ -1,0 +1,7 @@
+{
+  "winget": [
+    "Microsoft.PowerShell",
+    "Git.Git"
+  ],
+  "choco": []
+}
