@@ -1,11 +1,36 @@
 # Requires -Version 5.1
+param(
+    [string]$LogPath = (Join-Path $PSScriptRoot "..\log.txt")
+)
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+function Initialize-Log {
+    param([string]$Path)
+
+    if (-not $Path) {
+        return
+    }
+
+    Set-Content -Path $Path -Value "" -Encoding UTF8
+}
+
+function Write-Log {
+    param([string]$Message)
+
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $line = "[$timestamp] $Message"
+    Write-Host $line
+    if ($LogPath) {
+        Add-Content -Path $LogPath -Value $line
+    }
+}
+
 function Write-Section {
     param([string]$Title)
-    Write-Host ""
-    Write-Host "=== $Title ==="
+    Write-Log ""
+    Write-Log "=== $Title ==="
 }
 
 function Ask-YesNo {
@@ -70,6 +95,9 @@ function Assert-Prerequisites {
 
 $root = Split-Path -Parent $PSScriptRoot
 
+Initialize-Log -Path $LogPath
+Write-Log "Wizard avviato"
+
 Write-Section -Title "Standard Ambient Wizard"
 
 $runPhase1 = Ask-YesNo -Prompt "Eseguire Fase 1 (UI/comfort)?" -Default $true
@@ -98,38 +126,51 @@ if ($runPhase4) {
     $includeAllUsersStartMenu = Ask-YesNo -Prompt "Organizzare Start Menu per tutti gli utenti?" -Default $false
 }
 
+Write-Log ("Scelte: F1=$runPhase1 F2=$runPhase2 F3=$runPhase3 F4=$runPhase4 F5=$runPhase5 DryRun=$dryRun")
+if ($runPhase2) {
+    Write-Log ("Profili fase 2: $profiles | Interattivo=$interactive")
+}
+if ($runPhase4) {
+    Write-Log ("Start Menu all users: $includeAllUsersStartMenu")
+}
+
 Write-Section -Title "Esecuzione"
 
 $needsWinget = $runPhase2 -or $runPhase4
 $needsAdmin = $runPhase3
 Assert-Prerequisites -NeedsWinget:$needsWinget -NeedsAdmin:$needsAdmin
 
-if ($runPhase1) {
-    & (Join-Path $PSScriptRoot "phases\phase1.ps1")
-}
+try {
+    if ($runPhase1) {
+        & (Join-Path $PSScriptRoot "phases\phase1.ps1")
+    }
 
-if ($runPhase2) {
-    $profileList = $profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ }
-    $args = @("-Profiles", ($profileList -join ","))
-    if ($dryRun) { $args += "-DryRun" }
-    if ($interactive) { $args += "-Interactive" } else { $args += "-Silent" }
-    & (Join-Path $PSScriptRoot "phases\phase2.ps1") @args
-}
+    if ($runPhase2) {
+        $profileList = $profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+        $args = @("-Profiles", ($profileList -join ","))
+        if ($dryRun) { $args += "-DryRun" }
+        if ($interactive) { $args += "-Interactive" } else { $args += "-Silent" }
+        & (Join-Path $PSScriptRoot "phases\phase2.ps1") @args
+    }
 
-if ($runPhase3) {
-    & (Join-Path $PSScriptRoot "phases\phase3.ps1")
-}
+    if ($runPhase3) {
+        & (Join-Path $PSScriptRoot "phases\phase3.ps1")
+    }
 
-if ($runPhase4) {
-    $args = @()
-    if ($includeAllUsersStartMenu) { $args += "-IncludeAllUsersStartMenu" }
-    & (Join-Path $PSScriptRoot "phases\phase4.ps1") @args
-}
+    if ($runPhase4) {
+        $args = @()
+        if ($includeAllUsersStartMenu) { $args += "-IncludeAllUsersStartMenu" }
+        & (Join-Path $PSScriptRoot "phases\phase4.ps1") @args
+    }
 
-if ($runPhase5) {
-    $args = @()
-    if ($dryRun) { $args += "-DryRun" }
-    & (Join-Path $PSScriptRoot "phases\phase5.ps1") @args
-}
+    if ($runPhase5) {
+        $args = @()
+        if ($dryRun) { $args += "-DryRun" }
+        & (Join-Path $PSScriptRoot "phases\phase5.ps1") @args
+    }
 
-Write-Host "Wizard completato."
+    Write-Log "Wizard completato"
+} catch {
+    Write-Log ("Errore: " + $_.Exception.Message)
+    throw
+}
