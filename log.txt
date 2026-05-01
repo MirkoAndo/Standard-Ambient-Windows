@@ -1,0 +1,9 @@
+﻿
+[2026-05-01 13:49:51] Wizard avviato
+[2026-05-01 13:49:51] 
+[2026-05-01 13:49:51] === Standard Ambient Wizard ===
+[2026-05-01 13:49:51] Scelte: F1=True F2=True F3=False F4=False F5=False DryRun=False
+[2026-05-01 13:49:51] Profili fase 2: base,dev | Interattivo=True
+[2026-05-01 13:49:51] 
+[2026-05-01 13:49:51] === Esecuzione ===
+[2026-05-01 13:49:54] Errore: Errore in 'Windhawk': Percorso mod Windhawk non trovato. Specifica -WindhawkModsPath.

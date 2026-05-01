@@ -25,7 +25,8 @@ function Resolve-ConfigPath {
         return $Path
     }
 
-    return (Join-Path $scriptsRoot ".." $Path)
+    $base = Join-Path $scriptsRoot ".."
+    return (Join-Path $base $Path)
 }
 
 function Read-BackupNotice {
@@ -56,6 +57,22 @@ function Invoke-Step {
         Write-Error "Errore in '$Name': $($_.Exception.Message)"
         throw
     }
+}
+
+function Get-WindhawkModsPath {
+    $candidates = @(
+        (Join-Path $env:APPDATA "Windhawk\mods"),
+        (Join-Path $env:LOCALAPPDATA "Windhawk\mods"),
+        (Join-Path $env:ProgramData "Windhawk\mods")
+    )
+
+    foreach ($path in $candidates) {
+        if ($path -and (Test-Path $path)) {
+            return $path
+        }
+    }
+
+    return $null
 }
 
 Read-BackupNotice
@@ -111,12 +128,17 @@ if (-not $SkipWallpaper) {
 }
 
 if (-not $SkipWindhawk) {
-    Invoke-Step -Name "Windhawk" -Action {
-        $script = Join-Path $scriptsRoot "windhawk.ps1"
-        if (-not (Test-Path $script)) {
-            throw "Script non trovato: $script"
+    $modsPath = Get-WindhawkModsPath
+    if (-not $modsPath) {
+        Write-Warning "Windhawk non trovato. Step saltato."
+    } else {
+        Invoke-Step -Name "Windhawk" -Action {
+            $script = Join-Path $scriptsRoot "windhawk.ps1"
+            if (-not (Test-Path $script)) {
+                throw "Script non trovato: $script"
+            }
+            & $script -WindhawkModsPath $modsPath
         }
-        & $script
     }
 }
 
