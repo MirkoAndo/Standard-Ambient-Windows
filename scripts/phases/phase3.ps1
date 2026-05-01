@@ -1,12 +1,12 @@
 # Requires -Version 5.1
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
-
 param(
     [switch]$SkipPrivacy,
     [switch]$SkipPower,
     [switch]$SkipUpdate
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 $scriptsRoot = Split-Path -Parent $PSScriptRoot
 

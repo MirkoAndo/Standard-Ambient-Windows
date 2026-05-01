@@ -1,7 +1,4 @@
 # Requires -Version 5.1
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
-
 param(
     [switch]$SkipTheme,
     [switch]$SkipTaskbar,
@@ -12,7 +9,39 @@ param(
     [switch]$RestartExplorer
 )
 
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
 $scriptsRoot = Split-Path -Parent $PSScriptRoot
+
+function Resolve-ConfigPath {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $Path
+    }
+
+    if ([System.IO.Path]::IsPathRooted($Path)) {
+        return $Path
+    }
+
+    return (Join-Path $scriptsRoot ".." $Path)
+}
+
+function Read-BackupNotice {
+    $configPath = Resolve-ConfigPath -Path "config\settings\backup.json"
+    if (-not (Test-Path $configPath)) {
+        return
+    }
+
+    $config = Get-Content $configPath | ConvertFrom-Json
+    if ($null -eq $config.outputRoot) {
+        return
+    }
+
+    $outputRoot = [Environment]::ExpandEnvironmentVariables($config.outputRoot)
+    Write-Host "Backup previsto in: $outputRoot"
+}
 
 function Invoke-Step {
     param(
@@ -28,6 +57,8 @@ function Invoke-Step {
         throw
     }
 }
+
+Read-BackupNotice
 
 if (-not $SkipTheme) {
     Invoke-Step -Name "Tema e colori" -Action {

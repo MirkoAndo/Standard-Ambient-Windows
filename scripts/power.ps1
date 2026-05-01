@@ -1,12 +1,12 @@
 # Requires -Version 5.1
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
-
 param(
     [ValidateSet("HighPerformance", "Balanced", "PowerSaver", "UltimatePerformance", "Custom")]
     [string]$Plan = "HighPerformance",
     [string]$PlanGuid
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 function Get-PowerSchemes {
     $output = & powercfg /L 2>$null

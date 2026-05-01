@@ -1,7 +1,4 @@
 # Requires -Version 5.1
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
-
 param(
     [ValidateSet("Disable", "Enable")]
     [string]$AdvertisingId = "Disable",
@@ -10,6 +7,9 @@ param(
     [ValidateSet("Required", "Optional", "Full")]
     [string]$DiagnosticData = "Required"
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 function Assert-Admin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()

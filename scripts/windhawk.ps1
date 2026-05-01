@@ -1,12 +1,12 @@
 # Requires -Version 5.1
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
-
 param(
     [string]$ConfigPath = (Join-Path $PSScriptRoot "..\config\settings\windhawk.json"),
     [string]$WindhawkModsPath,
     [switch]$DryRun
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 function Resolve-WindhawkModsPath {
     param([string]$ExplicitPath)

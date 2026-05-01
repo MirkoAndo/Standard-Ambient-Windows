@@ -1,7 +1,4 @@
 # Requires -Version 5.1
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
-
 param(
     [string]$ConfigPath = (Join-Path $PSScriptRoot "..\config\settings\explorer.json"),
     [ValidateSet(0, 1)]
@@ -12,6 +9,9 @@ param(
     [int]$ShowProtectedOsFiles = 0,
     [switch]$RestartExplorer
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 
@@ -54,7 +54,7 @@ function Write-RegistryValue {
         }
         Set-ItemProperty -Path $Path -Name $Name -Value $Value -Type $Type
     } catch {
-        throw "Impossibile impostare $Path\\$Name: $($_.Exception.Message)"
+        throw "Impossibile impostare $Path\\${Name}: $($_.Exception.Message)"
     }
 }
 

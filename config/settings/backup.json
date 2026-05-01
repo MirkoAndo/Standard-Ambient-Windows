@@ -1,0 +1,15 @@
+{
+  "outputRoot": "%USERPROFILE%\\Desktop\\Standard-Ambient-Backup",
+  "includePaths": [
+    "config",
+    "docs",
+    "logs"
+  ],
+  "reportFormat": "markdown",
+  "wingetExport": true,
+  "registryExports": [
+    "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes",
+    "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced"
+  ],
+  "compress": true
+}

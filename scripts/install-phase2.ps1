@@ -1,7 +1,4 @@
 # Requires -Version 5.1
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
-
 param(
     [string]$ConfigPath = (Join-Path $PSScriptRoot "..\config\packages.json"),
     [string[]]$Profiles = @("base"),
@@ -10,6 +7,9 @@ param(
     [switch]$Interactive,
     [string]$LogDir = (Join-Path $PSScriptRoot "..\logs")
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 

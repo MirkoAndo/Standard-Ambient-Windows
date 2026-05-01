@@ -52,15 +52,17 @@ Obiettivo: privacy, sicurezza e prestazioni coerenti.
 
 Obiettivo: accelerare il lavoro quotidiano.
 
-- Scorciatoie
-- Layout e workspace
-- Profili terminale
-- Script di automazione
+- Start Menu: scorciatoie organizzate in cartelle
+- Snap Layouts (Windows)
+- Windows Terminal: tweak base
+- Oh My Posh: tema atomicBit
+- Cleanup temp e %TEMP%
 
 ## Fase 5 - Backup ed export
 
 Obiettivo: ripristino rapido e portabilita.
 
-- Export configurazioni
-- Snapshot pacchetti
-- Report finale
+- Export configurazioni (config, docs, logs)
+- Snapshot pacchetti (winget export)
+- Export registry (Themes, Explorer Advanced)
+- Report finale (Markdown)

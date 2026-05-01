@@ -1,0 +1,33 @@
+{
+  "categories": [
+    {
+      "name": "Browser",
+      "pattern": "(?i)brave|chrome|firefox|edge|opera"
+    },
+    {
+      "name": "Communication",
+      "pattern": "(?i)discord|whatsapp|teams|skype|telegram"
+    },
+    {
+      "name": "Gaming",
+      "pattern": "(?i)steam|epic|gog|battle\\.net"
+    },
+    {
+      "name": "Development",
+      "pattern": "(?i)visual studio|vscode|code|python|git|node|java|powershell"
+    },
+    {
+      "name": "Utilities",
+      "pattern": "(?i)winrar|7-zip|7zip|anydesk|windhawk"
+    },
+    {
+      "name": "Media",
+      "pattern": "(?i)vlc|spotify|music|video|media"
+    },
+    {
+      "name": "System",
+      "pattern": "(?i)windows|system|settings|tools"
+    }
+  ],
+  "defaultCategory": "Other"
+}

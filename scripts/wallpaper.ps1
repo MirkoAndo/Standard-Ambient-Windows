@@ -1,7 +1,4 @@
 # Requires -Version 5.1
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
-
 param(
     [string]$ConfigPath = (Join-Path $PSScriptRoot "..\config\settings\wallpaper.json"),
     [ValidateSet("Auto", "Light", "Dark")]
@@ -14,6 +11,9 @@ param(
     [string]$DarkLockScreenPath,
     [switch]$ApplyLockScreen
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 

@@ -1,13 +1,13 @@
 # Requires -Version 5.1
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
-
 param(
     [string[]]$Profiles = @("base"),
     [switch]$DryRun,
     [switch]$Silent,
     [switch]$Interactive
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 $scriptsRoot = Split-Path -Parent $PSScriptRoot
 

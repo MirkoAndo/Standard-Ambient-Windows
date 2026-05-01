@@ -16,10 +16,14 @@ Script di avvio fasi: scripts/phases/
 2. Personalizza config/packages.json
 3. Esegui scripts/install.ps1
 
+## Wizard
+
+- Avvio guidato: wizard.ps1
+
 ## Personalizzazione impostazioni
 
 - Salva le impostazioni da applicare in config/settings/
-- Aggiungi uno script dedicato in scripts/ (es. settings.ps1) per applicarle
+- Gli script sono gia presenti in scripts/
 
 ### UI e comfort
 
@@ -49,7 +53,21 @@ Script di avvio fasi: scripts/phases/
 - Windows Update: scripts/update.ps1
 - Avvio rapido: scripts/phases/phase3.ps1
 
+## Fase 4 - Produttivita
+
+- Start Menu: config/settings/startmenu.json -> scripts/startmenu.ps1
+- Snap Layouts: scripts/snap.ps1
+- Windows Terminal: scripts/terminal.ps1
+- Oh My Posh: scripts/ohmyposh.ps1
+- Cleanup: scripts/cleanup.ps1
+- Avvio rapido: scripts/phases/phase4.ps1
+
+## Fase 5 - Backup ed export
+
+- Config: config/settings/backup.json
+- Script: scripts/backup.ps1
+- Avvio rapido: scripts/phases/phase5.ps1
+
 ## Note
 
-- Aggiungi logiche di installazione reali in scripts/install.ps1
 - Registra output in logs/ se necessario

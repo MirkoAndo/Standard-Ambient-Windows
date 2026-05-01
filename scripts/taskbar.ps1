@@ -1,13 +1,13 @@
 # Requires -Version 5.1
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
-
 param(
     [string]$ConfigPath = (Join-Path $PSScriptRoot "..\config\settings\taskbar.json"),
     [ValidateSet("Center", "Left")]
     [string]$Alignment = "Center",
     [switch]$RestartExplorer
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 
@@ -50,7 +50,7 @@ function Write-RegistryValue {
         }
         Set-ItemProperty -Path $Path -Name $Name -Value $Value -Type $Type
     } catch {
-        throw "Impossibile impostare $Path\\$Name: $($_.Exception.Message)"
+        throw "Impossibile impostare $Path\\${Name}: $($_.Exception.Message)"
     }
 }
 

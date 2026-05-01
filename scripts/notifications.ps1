@@ -1,13 +1,13 @@
 # Requires -Version 5.1
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
-
 param(
     [string]$ConfigPath = (Join-Path $PSScriptRoot "..\config\settings\notifications.json"),
     [string[]]$AllowedApps,
     [switch]$DisableAllOthers,
     [switch]$EnableGlobalToasts
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
 
